@@ -1,0 +1,105 @@
+---
+title: "Workshop1"
+author: "Bryce Mazloum"
+format: html
+editor: visual
+---
+
+## Setup
+
+adding source code
+
+```{r}
+source("Workshop1.R")
+```
+
+## 1.9.1 Wrangling and Plotting in Parallel
+
+penguin mean body mass box plot comparison table
+
+```{r}
+mass_compare <- penguins |>
+  group_by(species, island) |>
+  summarise(mean_bodymass = mean(body_mass_g, na.rm = TRUE), 
+            n = n(),
+            .groups = "drop")
+penguins |>
+  ggplot(aes(x = species, y = body_mass_g, fill = island)) + geom_boxplot()
+```
+
+## 1.9.2 Piping Directly to Visualization
+
+```{r}
+# Pipe directly from aggregation to plotting with error bars
+mass_compare_plot <- penguins |>
+  group_by(species, island) |>
+  summarise(
+    mean_mass = mean(body_mass_g, na.rm = TRUE),
+    sd_mass = sd(body_mass_g, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) |>
+  ggplot(aes(x = species, y = mean_mass, colour = island)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_mass - sd_mass, 
+                    ymax = mean_mass + sd_mass), 
+                width = 0.2) +
+  labs(title = "Mean Body Mass by Species and Island",
+       subtitle = "Error bars represent standard deviation",
+       y = "Mean Body Mass (g)",
+       x = "Species") +
+  theme_minimal()
+
+mass_compare_plot
+```
+
+Think about what this figure is telling you about the biology of these species of penguins on these different islands. What do you think a statistical test would tell you here?
+
+Body mass is linked to species rather than to the island
+
+SE instead of SD plot
+
+```{r}
+mass_compare_plot_se <- penguins |>
+  group_by(species, island) |>
+  summarise(
+    mean_mass = mean(body_mass_g, na.rm = TRUE),
+    se_mass = (sd(body_mass_g, na.rm = TRUE)/sqrt(length(body_mass_g))),
+    n = n()
+  ) |>
+  ggplot(aes(x = species, y = mean_mass, colour = island)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_mass - se_mass, 
+                    ymax = mean_mass + se_mass), 
+                width = 0.2) +
+  labs(title = "Mean Body Mass by Species and Island",
+       subtitle = "Error bars represent standard errors",
+       y = "Mean Body Mass (g)",
+       x = "Species") +
+  theme_minimal()
+
+mass_compare_plot_se
+```
+
+## 1.10 Saving, Exporting and Version Milestones
+
+```{r}
+# Create output directories if they do not exist:
+if (!dir.exists("outputs/figures")) dir.create("outputs/figures") # folder for figs
+if (!dir.exists("outputs/tables")) dir.create("outputs/tables") # folder for tables
+if (!dir.exists("Rdata")) dir.create("Rdata") # folder for Rdata objects
+
+# 1. Exporting our collapsed summary table as a universal flat text file
+write_csv(biological_signal, "outputs/penguin_species_mass_summary.csv")
+
+# 2. Saving as a native R binary file
+saveRDS(species_mass_summary, "outputs/penguin_species_mass_summary.rds")
+
+
+#save figures
+ggsave("outputs/mass_compare_plot.png",
+       plot = mass_compare_plot,
+       width = 120, height = 120,
+       units = "mm", dpi = 300)
+```
+
